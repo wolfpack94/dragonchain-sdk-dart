@@ -35,10 +35,10 @@ class DragonchainClient {
     String method,
     {String contentType= '', String body=''}
   ) {
-    var timestamp = (new DateTime.now()).toIso8601String();
+    var timestamp = (new DateTime.now().toUtc()).toIso8601String();
     Map<String, String> headers = {
       "dragonchain": this.credentialService.dragonchainId,
-      "Authorization": this.credentialService.getAuthorizationHeader(method, path, timestamp, contentType, body),
+      "authorization": this.credentialService.getAuthorizationHeader(method, path, timestamp, contentType, body),
       "timestamp": timestamp
     };
     if (contentType != '' || contentType != null) headers["contentType"] = contentType;
@@ -51,17 +51,19 @@ class DragonchainClient {
     [String body= '']
   ) async {
     String contentType = '';
-    if (body != '' || body != null) contentType = 'application/json';
+    if (body != '') contentType = 'application/json';
     var headers = this.getHttpHeaders(path, method, contentType: contentType);
     String url = '${this.endpoint}$path';
     logger.d(headers);
     logger.d("URL: $url");
     var response = await httpMethods[method](url, headers: headers);
     if (response.statusCode == 200) {
-      var body = json.decode(response.body);
-      logger.d(body);
-      return body;
+      var responseBody = json.decode(response.body);
+      logger.d(responseBody);
+      return responseBody;
     }
+    var responseBody = json.decode(response.body);
+    logger.d(responseBody);
     throw Exception('Failed to connect to dragonchain: ${response.statusCode}');
   }
 
@@ -75,6 +77,7 @@ class DragonchainClient {
       String algorithm= 'SHA256'
     }
   ) async {
+    logger.d(algorithm);
     if (dragonchainId == null || dragonchainId == '') throw Exception('Did not provide dragonchain ID');
     if (endpoint == null || endpoint == '') endpoint = await ConfigService.getDragonchainEndpoint(dragonchainId);
     var credentials = new CredentialService(dragonchainId, { "authKeyId": authKeyId, "authKey": authKey }, algorithm);

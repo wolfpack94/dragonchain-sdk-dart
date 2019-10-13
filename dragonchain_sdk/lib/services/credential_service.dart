@@ -16,7 +16,7 @@ class CredentialService {
 
   static Future<CredentialService> createCredentials(
     String dragonchainId,
-    {String authKeyId= '', String authKey= '', String hmacAlgo= 'SHA256'}
+    [String authKeyId= '', String authKey= '', String hmacAlgo= 'SHA256']
   ) async {
     if (authKeyId == '' || authKey == '') {
       var credentials = await ConfigService.getDragonchainCredentials(dragonchainId);
@@ -37,7 +37,7 @@ class CredentialService {
     var bytes = utf8.encode(message);
     var encodedAuthKey = utf8.encode(this.credentials['authKey']);
     var hmacSha256 = new Hmac(sha256, encodedAuthKey);
-    var signature = base64.encode(utf8.encode(hmacSha256.convert(bytes).toString()));
+    var signature = base64.encode(hmacSha256.convert(bytes).bytes);
     return 'DC1-HMAC-${this.hmacAlgo} ${this.credentials['authKeyId']}:$signature';
   }
 
@@ -51,7 +51,7 @@ class CredentialService {
     [String body= '']
   ) {
     var binaryBody = utf8.encode(body);
-    var hashedBase64Content = base64.encode(utf8.encode(sha256.convert(binaryBody).toString()));
+    var hashedBase64Content = base64.encode(sha256.convert(binaryBody).bytes);
     return [method.toUpperCase(), path, dragonchainId, timestamp, contentType, hashedBase64Content].join('\n');
   }
 }
