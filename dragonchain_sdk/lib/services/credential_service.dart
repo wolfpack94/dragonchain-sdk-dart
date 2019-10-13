@@ -1,5 +1,11 @@
 library dragonchain_sdk;
+import 'dart:core';
+import 'dart:convert';
 import 'package:dragonchain_sdk/services/config_service.dart';
+import 'package:crypto/crypto.dart';
+import 'package:logger/logger.dart';
+
+final logger = new Logger();
 
 class CredentialService {
   String dragonchainId;
@@ -13,11 +19,39 @@ class CredentialService {
     {String authKeyId= '', String authKey= '', String hmacAlgo= 'SHA256'}
   ) async {
     if (authKeyId == '' || authKey == '') {
-      Map<String, String> credentials = await ConfigService.getDragonchainCredentials(dragonchainId);
+      var credentials = await ConfigService.getDragonchainCredentials(dragonchainId);
       authKeyId = credentials['authKeyId'];
       authKey = credentials['authKey'];
     }
-    var creds = new CredentialService(dragonchainId, { authKeyId: authKeyId, authKey: authKey }, hmacAlgo);
-    return creds;
+    return new CredentialService(dragonchainId, { authKeyId: authKeyId, authKey: authKey }, hmacAlgo);
+  }
+
+  getAuthorizationHeader(
+    String method,
+    String path,
+    String timestamp,
+    String contentType,
+    String body
+  ) {
+    var message = CredentialService.getHmacMessageString(method, path, this.dragonchainId, timestamp, contentType, this.hmacAlgo);
+    var bytes = utf8.encode(message);
+    var encodedAuthKey = utf8.encode(this.credentials['authKey']);
+    var hmacSha256 = new Hmac(sha256, encodedAuthKey);
+    var signature = base64.encode(utf8.encode(hmacSha256.convert(bytes).toString()));
+    return 'DC1-HMAC-${this.hmacAlgo} ${this.credentials['authKeyId']}:$signature';
+  }
+
+  static getHmacMessageString(
+    String method,
+    String path,
+    String dragonchainId,
+    String timestamp,
+    String contentType,
+    String hmacAlgo,
+    [String body= '']
+  ) {
+    var binaryBody = utf8.encode(body);
+    var hashedBase64Content = base64.encode(utf8.encode(sha256.convert(binaryBody).toString()));
+    return [method.toUpperCase(), path, dragonchainId, timestamp, contentType, hashedBase64Content].join('\n');
   }
 }
