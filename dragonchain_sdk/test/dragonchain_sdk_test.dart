@@ -1,13 +1,21 @@
 import 'package:dragonchain_sdk/dragonchain_sdk.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logger/logger.dart';
+import 'dart:convert';
 
 final logger = new Logger();
 
 void main() {
   test('returns proper hmac string', () async {
-    final client = await DragonchainClient.createClient(dragonchainId: 'kRkjXtchnRGkqbXUhRvjZLKNr4XB7fYWcMWZ6fdGxCjE', authKeyId: 'VYFFYTTSPKES', authKey: 'SSjCVEXUtj58vFbUf9274MnX9aFtJ5KFnB5jXdJfYbm', endpoint: 'https://45414ed2-b72c-42fb-8264-296df2600b4f.api.dragonchain.com');
-    logger.d(await client.getStatus());
+    final DragonchainClient client = await DragonchainClient.createClient(dragonchainId: 'kRkjXtchnRGkqbXUhRvjZLKNr4XB7fYWcMWZ6fdGxCjE', authKeyId: '', authKey: '', endpoint: '');
+    var response = await client.getStatus();
+    expect(response['id'], 'kRkjXtchnRGkqbXUhRvjZLKNr4XB7fYWcMWZ6fdGxCjE');
+  });
+
+  test('create transaction type', () async {
+    final DragonchainClient client = await DragonchainClient.createClient(dragonchainId: 'kRkjXtchnRGkqbXUhRvjZLKNr4XB7fYWcMWZ6fdGxCjE', authKeyId: '', authKey: '', endpoint: '');
+    var response = await client.createTransactionType('test');
+    logger.d(response);
   });
   // test('adds one to input values', () {
   //   final calculator = Calculator();

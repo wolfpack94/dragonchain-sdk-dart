@@ -26,8 +26,42 @@ class DragonchainClient {
     return await this.get('/v1/status');
   }
 
+  createTransaction(
+    String transactionType,
+    dynamic payload,
+    {String tag, String callbackURL}
+  ) async {
+    if (payload == null) payload = '';
+    var transactionBody = {
+      "version": '1',
+      "txn_type": transactionType,
+      "payload": payload
+    };
+    if (tag != null || tag != '') transactionBody['tag'] = tag;
+    return await this.post('/v1/transaction', transactionBody, callbackURL: callbackURL);
+  }
+
+  createTransactionType(
+    String transactionType,
+    [dynamic customIndexedFields]
+  ) async {
+    if (transactionType == null || transactionType == '') throw Exception('Empty transaction type');
+    var body = {
+      "version": '2',
+      "txn_type": transactionType
+    };
+    // if (customIndexedFields != null) customIndexedFields
+    return await this.post('/v1/transaction-type', body);
+  }
+
   get(String path) async {
     return this.makeRequest(path, 'GET');
+  }
+
+  post(String path, dynamic body, {String callbackURL}) async {
+    String bodyString = body is String ? body : json.encode(body);
+    logger.d('BODY STRING: $bodyString');
+    return this.makeRequest(path, 'POST', bodyString);
   }
 
   getHttpHeaders(
@@ -54,9 +88,18 @@ class DragonchainClient {
     if (body != '') contentType = 'application/json';
     var headers = this.getHttpHeaders(path, method, contentType: contentType);
     String url = '${this.endpoint}$path';
-    logger.d(headers);
-    logger.d("URL: $url");
-    var response = await httpMethods[method](url, headers: headers);
+    var response;
+    switch (method) {
+      case 'GET':
+        response = await http.get(url, headers: headers);
+        break;
+      case 'POST':
+        logger.d(headers);
+        response = await http.post(url, headers: headers, body: body);
+        break;
+      default:
+        throw Exception('Http method $method not valid');
+    }
     if (response.statusCode == 200) {
       var responseBody = json.decode(response.body);
       logger.d(responseBody);
