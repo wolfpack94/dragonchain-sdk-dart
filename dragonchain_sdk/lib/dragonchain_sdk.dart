@@ -86,7 +86,7 @@ class DragonchainClient {
   ) async {
     String contentType = '';
     if (body != '') contentType = 'application/json';
-    var headers = this.getHttpHeaders(path, method, contentType: contentType);
+    var headers = this.getHttpHeaders(path, method, contentType: contentType, body: body);
     String url = '${this.endpoint}$path';
     var response;
     switch (method) {
