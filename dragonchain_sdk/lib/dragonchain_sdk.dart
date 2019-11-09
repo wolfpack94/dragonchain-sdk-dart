@@ -59,7 +59,7 @@ class DragonchainClient {
   }
 
   post(String path, dynamic body, {String callbackURL}) async {
-    String bodyString = body is String ? body : json.encode(body);
+    String bodyString = body is String ? body : jsonEncode(body);
     logger.d('BODY STRING: $bodyString');
     return this.makeRequest(path, 'POST', bodyString);
   }
@@ -75,7 +75,7 @@ class DragonchainClient {
       "authorization": this.credentialService.getAuthorizationHeader(method, path, timestamp, contentType, body),
       "timestamp": timestamp
     };
-    if (contentType != '' || contentType != null) headers["contentType"] = contentType;
+    if (contentType != '' || contentType != null) headers["Content-Type"] = contentType;
     return headers;
   }
 
@@ -86,7 +86,8 @@ class DragonchainClient {
   ) async {
     String contentType = '';
     if (body != '') contentType = 'application/json';
-    var headers = this.getHttpHeaders(path, method, contentType: contentType);
+    var headers = this.getHttpHeaders(path, method, body: body, contentType: contentType);
+    logger.d("HEADERS: ${jsonEncode(headers)}");
     String url = '${this.endpoint}$path';
     var response;
     switch (method) {
@@ -101,12 +102,10 @@ class DragonchainClient {
         throw Exception('Http method $method not valid');
     }
     if (response.statusCode == 200) {
-      var responseBody = json.decode(response.body);
+      var responseBody = jsonDecode(response.body);
       logger.d(responseBody);
       return responseBody;
     }
-    var responseBody = json.decode(response.body);
-    logger.d(responseBody);
     throw Exception('Failed to connect to dragonchain: ${response.statusCode}');
   }
 
