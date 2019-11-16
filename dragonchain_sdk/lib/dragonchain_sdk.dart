@@ -2,15 +2,15 @@ library dragonchain_sdk;
 import 'package:logger/logger.dart';
 import 'package:dragonchain_sdk/services/config_service.dart';
 import 'package:dragonchain_sdk/services/credential_service.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:core';
+import 'dart:io';
 
 final httpMethods = {
-  "GET": http.get,
-  "POST": http.post,
-  "PUT": http.put,
-  "DELETE": http.delete
+  "GET": new HttpClient().getUrl,
+  "POST": new HttpClient().postUrl,
+  "PUT": new HttpClient().putUrl,
+  "DELETE": new HttpClient().deleteUrl
 };
 
 final logger = new Logger();
@@ -75,7 +75,7 @@ class DragonchainClient {
       "authorization": this.credentialService.getAuthorizationHeader(method, path, timestamp, contentType, body),
       "timestamp": timestamp
     };
-    if (contentType != '' || contentType != null) headers["Content-Type"] = "$contentType; charset=utf-8";
+    if (contentType != '' || contentType != null) headers["Content-Type"] = contentType;
     return headers;
   }
 
@@ -87,26 +87,16 @@ class DragonchainClient {
     String contentType = '';
     if (body != '') contentType = 'application/json';
     var headers = this.getHttpHeaders(path, method, body: body, contentType: contentType);
-    logger.d("HEADERS: ${jsonEncode(headers)}");
     String url = '${this.endpoint}$path';
-    var response;
-    switch (method) {
-      case 'GET':
-        response = await http.get(url, headers: headers);
-        break;
-      case 'POST':
-        logger.d(headers);
-        response = await http.post(url, headers: headers, body: body);
-        break;
-      default:
-        throw Exception('Http method $method not valid');
+    var request = await httpMethods[method](Uri.parse(url));
+    headers.forEach((key, value) => request.headers.set(key, value));
+    if (['PUT','POST','DELETE'].contains(method)) request.write(body);
+    var response = await request.close();
+    var responseBody;
+    await for (var contents in response.transform(Utf8Decoder())) {
+      responseBody = jsonDecode(contents);
     }
-    if (response.statusCode == 200) {
-      var responseBody = jsonDecode(response.body);
-      logger.d(responseBody);
-      return responseBody;
-    }
-    throw Exception('Failed to connect to dragonchain: ${response.statusCode}');
+    return responseBody;
   }
 
   static createClient(
