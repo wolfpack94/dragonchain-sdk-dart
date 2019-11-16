@@ -22,16 +22,6 @@ class DragonchainClient {
 
   DragonchainClient(this.endpoint, this.credentialService, this.verify);
 
-  generateQueryString(Map<String, String> queryObject) {
-    String path = '';
-    if (queryObject.length > 0) {
-      path = '?';
-      queryObject.forEach((String key, dynamic value) => path += "$key=$value&");
-    }
-    if (path.endsWith("&")) path = path.substring(0, path.length - 1);
-    return path;
-  }
-
   getStatus() async {
     return await this.get('/v1/status');
   }
@@ -89,14 +79,14 @@ class DragonchainClient {
 
   createTransactionType(
     String transactionType,
-    [dynamic customIndexedFields]
+    [List<Map<String, String>> customIndexedFields]
   ) async {
     if (transactionType == null || transactionType == '') throw Exception('Empty transaction type');
     var body = {
       "version": '2',
       "txn_type": transactionType
     };
-    // if (customIndexedFields != null) customIndexedFields
+    if (customIndexedFields != null) body["customIndexedFields"] = this.validateAndBuildCustomIndexFieldsArray(customIndexedFields);
     return await this.post('/v1/transaction-type', body);
   }
 
@@ -145,6 +135,45 @@ class DragonchainClient {
   post(String path, dynamic body, {String callbackURL}) async {
     String bodyString = body is String ? body : jsonEncode(body);
     return this.makeRequest(path, 'POST', bodyString);
+  }
+
+  generateQueryString(Map<String, String> queryObject) {
+    String path = '';
+    if (queryObject.length > 0) {
+      path = '?';
+      queryObject.forEach((String key, dynamic value) => path += "$key=$value&");
+    }
+    if (path.endsWith("&")) path = path.substring(0, path.length - 1);
+    return path;
+  }
+
+  validateAndBuildCustomIndexFieldsArray(List<Map<String, dynamic>> customIndexedFields) {
+    List<Map<String, dynamic>> returnList = [];
+    customIndexedFields.forEach((customIndexedField) {
+      Map<String, dynamic> customTransactionFieldBody = {
+        "path": customIndexedField["path"],
+        "field_name": customIndexedField["fieldName"],
+        "type": customIndexedField["type"]
+      };
+      if (customIndexedField["options"] != null) {
+        Map<String, String> optionsBody = {};
+        if (customIndexedField["options"]["noIndex"] != null) optionsBody["no_index"] = customIndexedField["options"]["noIndex"];
+        if (customIndexedField["type"] == "tag") {
+            if (customIndexedField["options"]["separator"] != null) optionsBody["separator"] = customIndexedField["options"]["separator"];
+        } else if (customIndexedField["type"] == "text") {
+          if (customIndexedField["options"]["noStem"] != null) optionsBody["no_stem"] = customIndexedField["options"]["noStem"];
+          if (customIndexedField["options"]["weight"] != null) optionsBody["weight"] = customIndexedField["options"]["weight"];
+          if (customIndexedField["options"]["sortable"] != null) optionsBody["sortable"] = customIndexedField["options"]["sortable"];
+        } else if (customIndexedField["type"] == "number") {
+          if (customIndexedField["options"]["sortable"] != null) optionsBody["sortable"] = customIndexedField["options"]["sortable"];
+        } else {
+          throw Exception("Parameter 'customIndexedFields[].type' must be 'tag', 'text' or 'number'");
+        }
+        customTransactionFieldBody["options"] = optionsBody;
+      }
+      returnList.add(customTransactionFieldBody);
+    });
+    return returnList;
   }
 
   getHttpHeaders(
