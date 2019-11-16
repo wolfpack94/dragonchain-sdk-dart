@@ -22,6 +22,16 @@ class DragonchainClient {
 
   DragonchainClient(this.endpoint, this.credentialService, this.verify);
 
+  generateQueryString(Map<String, String> queryObject) {
+    String path = '';
+    if (queryObject.length > 0) {
+      path = '?';
+      queryObject.forEach((String key, dynamic value) => path += "$key=$value&");
+    }
+    if (path.endsWith("&")) path = path.substring(0, path.length - 1);
+    return path;
+  }
+
   getStatus() async {
     return await this.get('/v1/status');
   }
@@ -41,6 +51,42 @@ class DragonchainClient {
     return await this.post('/v1/transaction', transactionBody, callbackURL: callbackURL);
   }
 
+  createBulkTransaction(
+    List<dynamic> transactionList,
+  ) async {
+    List<Map<String, String>> bulkTransactionBody = [];
+    for (var transaction in transactionList) {
+      Map<String, String> singleBody = {
+        "version": "1",
+        "txn_type": transaction["transactionType"],
+        "payload": transaction["payload"] ? transaction["payload"] : ""
+      };
+      if (transaction["tag"] != null || transaction["tag"] != "") singleBody["tag"] = transaction["tag"];
+      bulkTransactionBody.add(singleBody);
+    }
+    return await this.post("/v1/transaction_bulk", bulkTransactionBody);
+  }
+
+  queryTransactions(
+    String transactionType,
+    String redisearchQuery,
+    {bool verbatim, int offset, int limit, String sortBy, bool sortAscending, bool idsOnly}
+  ) async {
+    Map<String, dynamic> queryParams = {
+      "transaction_type": transactionType,
+      "q": redisearchQuery,
+      "offset": (offset != null) ? offset : 0,
+      "limit": (limit != null) ? limit : 10
+    };
+    if (verbatim != null) queryParams["verbatim"] = verbatim;
+    if (idsOnly != null) queryParams["id_only"] = idsOnly;
+    if (sortBy != null) {
+      queryParams["sort_by"] = sortBy;
+      if (sortAscending != null) queryParams["sort_asc"] = sortAscending;
+    }
+    return await this.get("/v1/transaction${this.generateQueryString(queryParams)}");
+  }
+
   createTransactionType(
     String transactionType,
     [dynamic customIndexedFields]
@@ -54,13 +100,50 @@ class DragonchainClient {
     return await this.post('/v1/transaction-type', body);
   }
 
+  getTransaction(String transactionId) async {
+    if (transactionId != null || transactionId != '') throw Exception("Parameter 'transactionId' is required");
+    return await this.get("/v1/transaction/$transactionId");
+  }
+
+  createApiKey([String nickname]) async {
+    Map<String, String> body = {};
+    if (nickname != null || nickname != '') body['nickname'] = nickname;
+    return await this.post("/v1/api-key", body);
+  }
+
+  listApiKeys() async {
+    return await this.get("/v1/api-key");
+  }
+
+  getApiKey(String keyId) async {
+    if (keyId != null || keyId != '') throw Exception("Parameter 'keyId' is required");
+    return await this.get("/v1/api-key/$keyId");
+  }
+
+  deleteApiKey(String keyId) async {
+    return await this.delete("/v1/api-key/$keyId");
+  }
+
+  updateApiKey(String keyId, String nickname) async {
+    if (nickname != null || nickname != '') throw Exception("Parameter 'nickname' is required");
+    return await this.put("/v1/api-key/$keyId", { "nickname": nickname });
+  }
+
   get(String path) async {
-    return this.makeRequest(path, 'GET');
+    return await this.makeRequest(path, 'GET');
+  }
+
+  delete(String path) async {
+    return await this.makeRequest(path, 'DELETE');
+  }
+
+  put(String path, dynamic body) async {
+    String bodyString = body is String ? body : jsonEncode(body);
+    return this.makeRequest(path, 'PUT', bodyString);
   }
 
   post(String path, dynamic body, {String callbackURL}) async {
     String bodyString = body is String ? body : jsonEncode(body);
-    logger.d('BODY STRING: $bodyString');
     return this.makeRequest(path, 'POST', bodyString);
   }
 
@@ -94,7 +177,7 @@ class DragonchainClient {
     var response = await request.close();
     var responseBody;
     await for (var contents in response.transform(Utf8Decoder())) {
-      responseBody = jsonDecode(contents);
+      responseBody = (method != 'DELETE') ? jsonDecode(contents) : contents;
     }
     return responseBody;
   }
