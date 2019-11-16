@@ -75,7 +75,7 @@ class DragonchainClient {
       "authorization": this.credentialService.getAuthorizationHeader(method, path, timestamp, contentType, body),
       "timestamp": timestamp
     };
-    if (contentType != '' || contentType != null) headers["Content-Type"] = contentType;
+    if (contentType != '' || contentType != null) headers["Content-Type"] = "$contentType; charset=utf-8";
     return headers;
   }
 
@@ -86,7 +86,8 @@ class DragonchainClient {
   ) async {
     String contentType = '';
     if (body != '') contentType = 'application/json';
-    var headers = this.getHttpHeaders(path, method, contentType: contentType, body: body);
+    var headers = this.getHttpHeaders(path, method, body: body, contentType: contentType);
+    logger.d("HEADERS: ${jsonEncode(headers)}");
     String url = '${this.endpoint}$path';
     var response;
     switch (method) {
