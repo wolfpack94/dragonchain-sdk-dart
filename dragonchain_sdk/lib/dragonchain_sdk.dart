@@ -22,9 +22,7 @@ class DragonchainClient {
 
   DragonchainClient(this.endpoint, this.credentialService, this.verify);
 
-  getStatus() async {
-    return await this.get('/v1/status');
-  }
+  getStatus() async => await this.get('/v1/status');
 
   createTransaction(
     String transactionType,
@@ -113,10 +111,7 @@ class DragonchainClient {
 
   getTransactionType(String transactionType) async => await this.get("/v1/transaction-type/$transactionType");
 
-  getTransaction(String transactionId) async {
-    if (transactionId != null || transactionId != '') throw Exception("Parameter 'transactionId' is required");
-    return await this.get("/v1/transaction/$transactionId");
-  }
+  getTransaction(String transactionId) async => await this.get("/v1/transaction/$transactionId");
 
   createApiKey([String nickname]) async {
     Map<String, String> body = {};
@@ -124,23 +119,13 @@ class DragonchainClient {
     return await this.post("/v1/api-key", body);
   }
 
-  listApiKeys() async {
-    return await this.get("/v1/api-key");
-  }
+  listApiKeys() async => await this.get("/v1/api-key");
 
-  getApiKey(String keyId) async {
-    if (keyId != null || keyId != '') throw Exception("Parameter 'keyId' is required");
-    return await this.get("/v1/api-key/$keyId");
-  }
+  getApiKey(String keyId) async => await this.get("/v1/api-key/$keyId");
 
-  deleteApiKey(String keyId) async {
-    return await this.delete("/v1/api-key/$keyId");
-  }
+  deleteApiKey(String keyId) async => await this.delete("/v1/api-key/$keyId");
 
-  updateApiKey(String keyId, String nickname) async {
-    if (nickname != null || nickname != '') throw Exception("Parameter 'nickname' is required");
-    return await this.put("/v1/api-key/$keyId", { "nickname": nickname });
-  }
+  updateApiKey(String keyId, String nickname) async => await this.put("/v1/api-key/$keyId", { "nickname": nickname });
 
   createSmartContract(
     String transactionType,
@@ -222,9 +207,7 @@ class DragonchainClient {
     throw Exception("At least one of 'smartContractId' or 'transactionType' must be specified");
   }
 
-  deleteSmartContract(String smartContractId) async {
-    return await this.delete("/v1/contract/$smartContractId");
-  }
+  deleteSmartContract(String smartContractId) async => await this.delete("/v1/contract/$smartContractId");
 
   getSmartContractLogs(
     String smartContractId,
@@ -346,7 +329,7 @@ class DragonchainClient {
     var response = await request.close();
     var responseBody;
     await for (var contents in response.transform(Utf8Decoder())) {
-      responseBody = (method != 'DELETE') ? jsonDecode(contents) : contents;
+      responseBody = (method != 'DELETE' || parse == true) ? jsonDecode(contents) : contents;
     }
     return responseBody;
   }
